@@ -1,36 +1,25 @@
+from groq import Groq
+import os
+from dotenv import load_dotenv
+
+# Load API key from .env file
+load_dotenv()
+
 class AIAgent:
+    def __init__(self):
+        self.client = Groq(
+            api_key=os.getenv("GROQ_API_KEY")
+        )
 
     def process_prompt(self, prompt):
+        response = self.client.chat.completions.create(
+            model="llama-3.1-8b-instant",   # Updated model
+            messages=[
+                {"role": "system", "content": "You are a helpful AI assistant."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.7,
+            max_tokens=512
+        )
 
-        prompt_lower = prompt.lower()
-
-        if "search" in prompt_lower:
-            return self.web_search(prompt)
-
-        elif "read file" in prompt_lower:
-            return self.read_file(prompt)
-
-        else:
-            return self.answer(prompt_lower)
-
-
-    def answer(self, prompt):
-
-        if "artificial intelligence" in prompt:
-            return "Artificial Intelligence is the simulation of human intelligence by machines."
-
-        if "machine learning" in prompt:
-            return "Machine Learning is a subset of AI that allows systems to learn from data."
-
-        if "cyber security" in prompt:
-            return "Cybersecurity protects systems, networks, and data from digital attacks."
-
-        return "I am a simulated AI agent responding to your query."
-
-
-    def web_search(self, prompt):
-        return "Simulated web search result: Latest AI research is advancing rapidly."
-
-
-    def read_file(self, prompt):
-        return "Simulated file content: configuration.txt loaded."
+        return response.choices[0].message.content
