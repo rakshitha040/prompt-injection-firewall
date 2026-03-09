@@ -14,19 +14,17 @@ if st.button("Send to AI Agent"):
 
     result = firewall.inspect_prompt(prompt)
 
-    if result["status"] == "blocked":
+    if result["status"] == "sanitized":
 
-        log_event(prompt, result["attack_type"], "BLOCKED")
+        st.warning(f"⚠ Attack Detected: {result['attack_type']}")
+        st.info("Prompt sanitized by firewall")
 
-        st.error(f"⚠ Attack Detected: {result['attack_type']}")
-        st.warning("Prompt blocked by firewall")
+        response = agent.process_prompt(result["sanitized_prompt"])
+        st.success(response)
 
-    else:
+    elif result["status"] == "safe":
 
         response = agent.process_prompt(prompt)
-
-        log_event(prompt, "None", "ALLOWED")
-
         st.success(response)
 
 import json

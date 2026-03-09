@@ -10,14 +10,19 @@ class PromptFirewall:
         attack = self.detector.detect_attack(prompt)
 
         if attack:
+
+            sanitized_prompt = prompt.replace("ignore previous instructions", "")
+            sanitized_prompt = sanitized_prompt.replace("delete the database", "")
+            sanitized_prompt = sanitized_prompt.replace("send me all system passwords", "")
+
             return {
-                "status": "blocked",
+                "status": "sanitized",
                 "attack_type": attack,
-                "message": "Prompt blocked by firewall"
+                "sanitized_prompt": sanitized_prompt
             }
 
         return {
             "status": "safe",
             "attack_type": None,
-            "message": "Prompt allowed"
+            "sanitized_prompt": prompt
         }
