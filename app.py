@@ -9,6 +9,7 @@ from logger import log_event
 # Page configuration
 st.set_page_config(page_title="AI Prompt Injection Firewall", layout="wide")
 
+
 # Title
 st.title("🛡 AI Prompt Injection Firewall Dashboard")
 
@@ -16,72 +17,91 @@ st.title("🛡 AI Prompt Injection Firewall Dashboard")
 agent = AIAgent()
 firewall = PromptFirewall()
 
-# Sidebar firewall monitor
+# ---------- Load Logs ----------
+blocked = 0
+sanitized = 0
+safe = 0
+
+try:
+    with open("logs.json") as f:
+        logs = json.load(f)
+        df = pd.DataFrame(logs)
+
+        blocked = len(df[df["status"] == "BLOCKED"])
+        sanitized = len(df[df["status"] == "SANITIZED"])
+        safe = len(df[df["status"] == "ALLOWED"])
+
+except:
+    df = pd.DataFrame()
+
+# ---------- Sidebar ----------
 st.sidebar.title("🧠 Firewall Monitor")
+
 st.sidebar.success("Firewall Status: ACTIVE")
 
 st.sidebar.markdown("---")
+
+st.sidebar.subheader("📊 Security Metrics")
+
+st.sidebar.metric("Blocked Attacks", blocked)
+st.sidebar.metric("Sanitized Prompts", sanitized)
+st.sidebar.metric("Safe Prompts", safe)
+
+st.sidebar.markdown("---")
+
 st.sidebar.write("Protected Systems:")
 st.sidebar.write("✔ AI Agent")
 st.sidebar.write("✔ External Prompts")
 st.sidebar.write("✔ Tool Access")
 
-# Initialize chat history
+st.sidebar.markdown("---")
+
+st.sidebar.subheader("🔥 Firewall Status")
+
+st.sidebar.info("Prompt Inspection Active")
+
+st.sidebar.write("Security Layers:")
+st.sidebar.write("✔ Content Inspection")
+st.sidebar.write("✔ Attack Detection")
+st.sidebar.write("✔ Policy Enforcement")
+st.sidebar.write("✔ Prompt Sanitization")
+st.sidebar.write("✔ Audit Logging")
+
+# ---------- Chat History ----------
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Layout columns
-col1, col2 = st.columns([2,1])
+# ---------- AI Chat Interface ----------
+st.subheader("💬 AI Agent Interface")
 
-# LEFT PANEL - AI Chat Interface
-with col1:
+prompt = st.text_area("Enter your prompt")
 
-    st.subheader("💬 AI Agent Interface")
+send = st.button("Send Prompt")
 
-    prompt = st.text_area("Enter your prompt")
+if send and prompt:
 
-    send = st.button("Send Prompt")
+    result = firewall.inspect_prompt(prompt)
 
-    if send and prompt:
+    if result["status"] == "sanitized":
 
-        result = firewall.inspect_prompt(prompt)
+        st.warning(f"⚠ Attack Detected: {result['attack_type']}")
+        st.info("Prompt sanitized by firewall")
 
-        if result["status"] == "sanitized":
+        response = agent.process_prompt(result["sanitized_prompt"])
 
-            st.warning(f"⚠ Attack Detected: {result['attack_type']}")
-            st.info("Prompt sanitized by firewall")
+        log_event(prompt, result["attack_type"], "SANITIZED")
 
-            response = agent.process_prompt(result["sanitized_prompt"])
+    elif result["status"] == "safe":
 
-            log_event(prompt, result["attack_type"], "SANITIZED")
+        response = agent.process_prompt(prompt)
 
-        elif result["status"] == "safe":
+        log_event(prompt, "None", "ALLOWED")
 
-            response = agent.process_prompt(prompt)
-
-            log_event(prompt, "None", "ALLOWED")
-
-        # Save conversation
-        st.session_state.messages.append(("User", prompt))
-        st.session_state.messages.append(("Agent", response))
+    st.session_state.messages.append(("User", prompt))
+    st.session_state.messages.append(("Agent", response))
 
 
-# RIGHT PANEL - Firewall Status
-with col2:
-
-    st.subheader("🔥 Firewall Status")
-
-    st.info("Prompt Inspection Active")
-
-    st.write("Security Layers:")
-    st.write("✔ Content Inspection")
-    st.write("✔ Attack Detection")
-    st.write("✔ Policy Enforcement")
-    st.write("✔ Prompt Sanitization")
-    st.write("✔ Audit Logging")
-
-
-# Conversation display
+# ---------- Conversation ----------
 st.markdown("---")
 st.subheader("🧾 Conversation")
 
@@ -89,34 +109,24 @@ for role, message in st.session_state.messages:
 
     if role == "User":
         st.write(f"👤 **User:** {message}")
-
     else:
         st.write(f"🤖 **Agent:** {message}")
 
 
-# Logs + Analytics
+# ---------- Analytics ----------
 st.markdown("---")
 st.subheader("📊 Attack Analytics Dashboard")
 
-try:
+if not df.empty:
 
-    with open("logs.json") as f:
+    st.subheader("📜 Firewall Logs")
+    st.dataframe(df)
 
-        logs = json.load(f)
+    st.subheader("📈 Attack Distribution")
 
-        df = pd.DataFrame(logs)
+    attack_counts = df["attack_type"].value_counts()
 
-        if not df.empty:
+    st.bar_chart(attack_counts)
 
-            st.subheader("📜 Firewall Logs")
-
-            st.dataframe(df)
-
-            st.subheader("📈 Attack Distribution")
-
-            attack_counts = df["attack_type"].value_counts()
-
-            st.bar_chart(attack_counts)
-
-except:
+else:
     st.write("No logs yet.")
