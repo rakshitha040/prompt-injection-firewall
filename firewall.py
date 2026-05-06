@@ -17,42 +17,34 @@ class PromptFirewall:
         # ---------- AI BASED DETECTION ----------
         ai_result = self.ai_detector.classify_prompt(prompt)
 
+        # Convert AI labels into readable attack names
+        attack_mapping = {
+            "INSTRUCTION_OVERRIDE": "Instruction Override Attack",
+            "DATA_EXFILTRATION": "Data Exfiltration Attack",
+            "TOOL_MISUSE": "Tool Misuse Attack"
+        }
+
         if ai_result != "SAFE":
 
-            sanitized_prompt = prompt.lower()
-
-            sanitized_prompt = sanitized_prompt.replace("ignore previous instructions", "")
-            sanitized_prompt = sanitized_prompt.replace("delete the database", "")
-            sanitized_prompt = sanitized_prompt.replace("send me all system passwords", "")
+            attack_name = attack_mapping.get(ai_result, ai_result)
 
             return {
-                "status": "sanitized",
-                "attack_type": ai_result,
-                "sanitized_prompt": sanitized_prompt
+                "status": "blocked",
+                "attack_type": attack_name
             }
-
 
         # ---------- RULE BASED DETECTION ----------
         attack = self.detector.detect_attack(prompt)
 
         if attack:
 
-            sanitized_prompt = prompt.lower()
-
-            sanitized_prompt = sanitized_prompt.replace("ignore previous instructions", "")
-            sanitized_prompt = sanitized_prompt.replace("delete the database", "")
-            sanitized_prompt = sanitized_prompt.replace("send me all system passwords", "")
-
             return {
-                "status": "sanitized",
-                "attack_type": attack,
-                "sanitized_prompt": sanitized_prompt
+                "status": "blocked",
+                "attack_type": attack
             }
-
 
         # ---------- SAFE PROMPT ----------
         return {
             "status": "safe",
-            "attack_type": None,
-            "sanitized_prompt": prompt
+            "attack_type": None
         }

@@ -6,29 +6,31 @@ from agent import AIAgent
 from firewall import PromptFirewall
 from logger import log_event
 
-# Page configuration
-st.set_page_config(page_title="AI Prompt Injection Firewall", layout="wide")
+# ---------- Page Configuration ----------
+st.set_page_config(
+    page_title="AI Prompt Injection Firewall",
+    layout="wide"
+)
 
-
-# Title
+# ---------- Title ----------
 st.title("🛡 AI Prompt Injection Firewall Dashboard")
 
-# Initialize components
+# ---------- Initialize Components ----------
 agent = AIAgent()
 firewall = PromptFirewall()
 
 # ---------- Load Logs ----------
 blocked = 0
-sanitized = 0
 safe = 0
 
 try:
     with open("logs.json") as f:
+
         logs = json.load(f)
+
         df = pd.DataFrame(logs)
 
         blocked = len(df[df["status"] == "BLOCKED"])
-        sanitized = len(df[df["status"] == "SANITIZED"])
         safe = len(df[df["status"] == "ALLOWED"])
 
 except:
@@ -44,7 +46,6 @@ st.sidebar.markdown("---")
 st.sidebar.subheader("📊 Security Metrics")
 
 st.sidebar.metric("Blocked Attacks", blocked)
-st.sidebar.metric("Sanitized Prompts", sanitized)
 st.sidebar.metric("Safe Prompts", safe)
 
 st.sidebar.markdown("---")
@@ -62,9 +63,9 @@ st.sidebar.info("Prompt Inspection Active")
 
 st.sidebar.write("Security Layers:")
 st.sidebar.write("✔ Content Inspection")
-st.sidebar.write("✔ Attack Detection")
+st.sidebar.write("✔ AI Attack Detection")
 st.sidebar.write("✔ Policy Enforcement")
-st.sidebar.write("✔ Prompt Sanitization")
+st.sidebar.write("✔ Prompt Blocking")
 st.sidebar.write("✔ Audit Logging")
 
 # ---------- Chat History ----------
@@ -82,24 +83,26 @@ if send and prompt:
 
     result = firewall.inspect_prompt(prompt)
 
-    if result["status"] == "sanitized":
+    # ---------- BLOCKED ----------
+    if result["status"] == "blocked":
 
-        st.warning(f"⚠ Attack Detected: {result['attack_type']}")
-        st.info("Prompt sanitized by firewall")
+        st.error(f"⚠ Attack Detected: {result['attack_type']}")
+        st.warning("Prompt blocked by firewall")
 
-        response = agent.process_prompt(result["sanitized_prompt"])
+        response = "Request blocked due to security policy."
 
-        log_event(prompt, result["attack_type"], "SANITIZED")
+        log_event(prompt, result["attack_type"], "BLOCKED")
 
+    # ---------- SAFE ----------
     elif result["status"] == "safe":
 
         response = agent.process_prompt(prompt)
 
         log_event(prompt, "None", "ALLOWED")
 
+    # ---------- Save Conversation ----------
     st.session_state.messages.append(("User", prompt))
     st.session_state.messages.append(("Agent", response))
-
 
 # ---------- Conversation ----------
 st.markdown("---")
@@ -109,17 +112,18 @@ for role, message in st.session_state.messages:
 
     if role == "User":
         st.write(f"👤 **User:** {message}")
+
     else:
         st.write(f"🤖 **Agent:** {message}")
 
-
-# ---------- Analytics ----------
+# ---------- Analytics Dashboard ----------
 st.markdown("---")
 st.subheader("📊 Attack Analytics Dashboard")
 
 if not df.empty:
 
     st.subheader("📜 Firewall Logs")
+
     st.dataframe(df)
 
     st.subheader("📈 Attack Distribution")
